@@ -16,3 +16,21 @@
  (modules :standard)
  (preprocess
   (pps ppx_inline_test ppx_deriving.show ppx_compare sedlex.ppx ppx_assert)))
+
+(rule
+ (with-stdout-to
+  js_template.ml
+  (progn
+   (echo "let template = {|")
+   (cat ../runtimes/template.js)
+   (echo "|}"))
+))
+
+(rule
+ (with-stdout-to
+  eval_tree_template.ml
+  (progn
+   (echo "let template = {|")
+   (cat ../runtimes/template.eval_tree)
+   (echo "|}"))
+))

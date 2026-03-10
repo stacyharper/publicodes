@@ -36,6 +36,7 @@ depends: [
   "stdune"
   "unionFind"
   "yaml"
+  "jingoo"
   "yojson"
   "ocaml-lsp-server" {with-dev-setup}
   "ocamlformat" {"0.28.1" >= with-dev-setup}

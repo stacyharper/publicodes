@@ -1,0 +1,123 @@
+{%- macro binop_meth (op) %}
+	{%- switch op %}
+	{%- case "add" -%} +
+	{%- case "sub" -%} -
+	{%- case "mul" -%} *
+	{%- case "div" -%} /
+	{%- case "pow" -%} **
+	{%- case "eq" -%} =
+	{%- case "neq" -%} !=
+	{%- case "lt" -%} <
+	{%- case "gt" -%} >
+	{%- case "gte" -%} >=
+	{%- case "lte" -%} <=
+	{%- case "and" -%} &&
+	{%- case "or" -%} ||
+	{%- case "min" -%} min
+	{%- case "max" -%} max
+	{%- endswitch %}
+{%- endmacro %}
+
+{%- macro unop_meth (op) %}
+	{%- switch op %}
+	{%- case "neg_op" -%} -
+	{%- case "is_undef" -%} is_undef
+	{%- endswitch %}
+{%- endmacro %}
+
+{%- macro rule_unit (unit) %}
+	{%- if unit && unit != "aucune" %} {{ unit }}{% endif %}
+{%- endmacro %}
+
+{%- function needs_parens (op) %}
+	{{ op == "binary_op" || op == "unary_op" }}
+{%- endfunction %}
+
+{%- macro format_operand (rule) %}
+	{%- if needs_parens(rule.type) %}({% endif -%}
+	{{ rule(rule.type, rule.value, rule.unit) }}
+	{%- if needs_parens(rule.type) %}){% endif -%}
+{%- endmacro %}
+
+{%- macro indent (prefix) -%}
+{%- set input -%}{{ caller() }}{%- endset -%}
+{{ replace ("\n", "\n" + prefix, input) }}
+{%- endmacro -%}
+
+
+{%- macro rule (type, value, unit) %}
+{%- switch type %}
+
+{%- case "number" -%}
+{{ value.number }}{{ rule_unit (value.unit) }}
+
+{%- case "text" -%}
+"{{ value }}"
+
+{%- case "bool" -%}
+{{ value }}
+
+{%- case "date" -%}
+{%- if value.day -%}
+Shared_ast.Day {day = {{ value.day }}; year = {{ value.year }}; month = {{ value.month}}}
+{%- else -%}
+Shared_ast.Month {month = {{ value.month}}; year = {{ value.year }}}
+{%- endif %}
+
+{%- case "null" -%}
+null
+
+{%- case "undefined" -%}
+undefined
+
+{%- case "round" -%}
+round {% if value.mode != "nearest" %}{{ value.mode }} {% endif %}to:
+{%- call indent ("  ") %} {{ rule(value.precision.type, value.precision.value, value.precision.unit) }}
+{%- endcall %}
+{{ rule(value.number.type, value.number.value, value.number.unit) }}
+
+{%- case "condition" -%}
+if
+{%- call indent ("  ") %} {{
+	rule(value.cond.type, value.cond.value, value.cond.unit) }}
+{%- endcall %}
+then
+{%- call indent ("  ") %} {{
+	rule(value.then.type, value.then.value, value.then.unit) }}
+{%- endcall %}
+else
+{%- call indent ("  ") %} {{
+	rule(value._else.type, value._else.value, value._else.unit) }}
+{%- endcall %}
+
+{%- case "binary_op" -%}
+{{ format_operand(value.left) }} {{ binop_meth(value.op) }} {{ format_operand(value.right) }}
+
+{%- case "unary_op" -%}
+{{ unop_meth(value.op) }} {{ rule(value.arg.type, value.arg.value, value.arg.unit) }}
+
+{%- case "ref" -%}
+@{{ value }}
+
+{%- case "get_ctx" -%}
+get_context({{ value }})
+
+{%- case "set_ctx" -%}
+with
+{
+{%- for name, value in value.items %}
+{{ name }} = {{ rule(value.type, value.value, value.unit) }}
+{%- endfor %}
+}
+in
+{{ rule(value.expr.type, value.expr.value, value.expr.unit) }}
+{%- endswitch %}
+{%- endmacro %}
+
+{%- for rule_type, rule_name, rule_data in rules %}
+{%- if !loop.first %}
+
+{% endif -%}
+{{ rule_name }} :
+{{ rule(rule_data.type, rule_data.value, rule_data.unit) }}
+{%- endfor -%}

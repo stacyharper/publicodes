@@ -1,3 +1,4 @@
+/** Start embedded runtime */
 /* eslint-disable */
 /**
  * @typedef {Date | number | string | null | undefined} Value
@@ -582,3 +583,210 @@ function $evaluate(fn, _global, options = {}) {
 
 	return { value, needed, missing }
 }
+
+/** End embedded runtime */
+
+/** Compiled private Publicodes rules */
+
+{%- macro binop_meth (op) -%}
+	{%- switch op -%}
+	{%- case "add" -%} $add
+	{%- case "sub" -%} $sub
+	{%- case "mul" -%} $mul
+	{%- case "div" -%} $div
+	{%- case "pow" -%} $pow
+	{%- case "eq" -%} $eq
+	{%- case "neq" -%} $neq
+	{%- case "lt" -%} $lt
+	{%- case "gt" -%} $gt
+	{%- case "gte" -%} $gte
+	{%- case "lte" -%} $lte
+	{%- case "and" -%} $and
+	{%- case "or" -%} $or
+	{%- case "min" -%} $min
+	{%- case "max" -%} $max
+	{%- endswitch %}
+{%- endmacro %}
+
+{%- macro identifier (name) -%}
+	{{ name
+		| replace("_", "___")
+		| replace(" ", "_")
+		| replace("\\.", "·")
+		| replace("'", "ʹ")
+		| replace("-", "__t__")
+		| replace("«", "__go__")
+		| replace("»", "__gf__")
+		| replace("\"", "__d__")
+		| replace("€", "__euro__")
+		| replace("%", "__pct__")
+		| replace("²", "__sq__")
+	}}
+{%- endmacro -%}
+
+{%- macro method (name) -%}
+	_{{ identifier(name) }}
+{%- endmacro -%}
+
+{%- macro type (name) -%}
+	{{ identifier(name) }}Params
+{%- endmacro -%}
+
+{%- macro esc (input) -%}
+	{{ input
+		| replace ("'", "\\'")
+		| replace ("\n", "\\n")
+		| replace ("\t", "\\t") }}
+{%- endmacro -%}
+
+{%- macro indentret (prefix) -%}
+{%- set input %}
+{{ caller() }}
+{%- endset -%}
+{{ replace ("\n", "\n" + prefix, input) }}
+{%- endmacro -%}
+
+{%- macro rule (type, value) -%}
+	{%- switch type %}
+	{%- case "number" -%}
+		{{ value.number }}
+	{%- case "text" -%}
+		"{{ esc(value) }}"
+	{%- case "bool" -%}
+		{{ value }}
+	{%- case "date" -%}
+		{%- if value.day -%}
+			{{ printf("new Date('%d-%02d-%02d')",
+				value.year, value.month, value.day) }}
+		{%- else -%}
+			{{ printf("new Date('%02d-%02d')",
+				value.year, value.month) }}
+		{%- endif -%}
+	{%- case "null" -%}
+		null
+	{%- case "undefined" -%}
+		undefined
+	{%- case "round" -%}
+		$round("{{ value.mode }}", {{ rule(value.number.type, value.number.value) }}, () => {{ rule(value.precision.type, value.precision.value) }})
+	{%- case "condition" -%}
+		$cond(
+			{%- call indentret ("  ") -%}
+			{{ rule(value.cond.type, value.cond.value) }}, () => {{ rule(value.then.type, value.then.value) }}, () => {{ rule(value._else.type, value._else.value) }}
+			{%- endcall -%}
+		)
+	{%- case "binary_op" -%}
+		{{ binop_meth(value.op) }}(
+			{%- call indentret ("  ") -%}
+			{{ rule(value.left.type, value.left.value) }},
+			{%- endcall -%}
+			{%- call indentret ("  ") -%}
+				{%- if value.lazy -%}
+				() => {{ rule(value.right.type, value.right.value) }}
+				{%- else -%}
+				{{ rule(value.right.type, value.right.value) }}
+				{%- endif -%}
+			{%- endcall -%}
+		)
+	{%- case "unary_op" -%}
+		{%- switch value.op -%}
+		{%- case "neg_op" -%}
+			(-{{ rule(value.arg.type, value.arg.value) }})
+		{%- case "is_undef" -%}
+			({{ rule(value.arg.type, value.arg.value) }} === undefined)
+		{%- endswitch -%}
+	{%- case "ref" -%}
+		$ref("{{ value }}", {{ method(value) }}, ctx, params)
+	{%- case "get_ctx" -%}
+		$get("{{ value }}", ctx, params)
+	{%- case "set_ctx" -%}
+		((ctx) => {{ rule(value.expr.type, value.expr.value) }})(
+			{
+				...ctx,
+				{%- for name, value in value.items %}
+					"{{ name }}": {{ rule(value.type, value.value) }},
+				{% endfor %}
+			}
+		)
+	{%- default -%}
+		not handled {{ type }}
+	{%- endswitch %}
+{%- endmacro %}
+
+{%- for rule_type, rule_name, rule_data in rules %}
+
+/** @type {Fn<{{ rule_type }}>} */
+function {{ method(rule_name) }}(ctx, params) {
+  return /** @type \{{{ rule_type}}\} */ (
+    {%- call indentret ("    ") -%}
+    {{ rule(rule_data.type, rule_data.value) }}
+    {%- endcall %}
+  )
+}
+{%- endfor %}
+
+/** Exported outputs/inputs */
+
+const rules = {
+  {%- for out in outputs %}
+  {%- if out.title || out.description %}
+  /**
+   {%- if out.title %}
+   * **{{ out.title }}**
+   {%- endif %}
+   {%- if out.description %}
+   *
+   * {{ out.description }}
+   {%- endif %}
+   */
+  {%- endif %}
+  '{{ esc(out.rule_name) }}': {
+    /**
+     * Parameters of "{{ out.rule_name }}"
+     * @typedef \{{
+     {%- for type, value in out.params %}
+     *  '{{ esc(value) }}'?: {{ type }} | undefined
+     {%- endfor %}
+     * }} {{ identifier(out.rule_name) }}Params
+     */
+    /**
+     * Evaluate "{{ out.rule_name }}"
+     * @type {(params?: {{ type(out.rule_name) }}, options?: {cache?: boolean}) => {{ out.return_type }} | undefined | null}
+     */
+    evaluate: (params = {}, options) =>
+      $evaluate({{ method(out.rule_name) }}, params, options).value,
+    /**
+     * Evaluate "{{ out.rule_name }}" with information on missing and needed parameters
+     * @type {(params?: {{ type(out.rule_name) }}, options?: {cache?: boolean}) => {value: {{ out.return_type }} | undefined | null, needed: Array<keyof {{ type(out.rule_name) }}>, missing: Array<keyof {{ type(out.rule_name) }}>}}
+     */
+    evaluateParams: (params = {}, options) =>
+      $evaluate({{ method(out.rule_name) }}, params, options),
+    /** @type {"{{ out.rule_type }}"} */
+    type: "{{ out.rule_type }}",
+    {%- if out.unit %}
+    /** @type {"{{ out.unit }}"} */
+    unit: "{{ out.unit }}",
+    {%- endif %}
+    /**
+     * Parameter list for "{{ out.rule_name }}"
+     * @type {Array<keyof {{ type(out.rule_name) }}>}
+     */
+    params: [
+    {%- for type, value in out.params -%}
+      '{{ esc(value) }}'{% if !loop.last %},{% endif %}
+    {%- endfor -%}
+    ],
+    {%- for type, value in out.metas %}
+    {%- switch type %}
+    {%- case "custom" %}
+    /** Custom meta of rule "{{ out.rule_name }}" */
+    meta: {{ value }} /** @type {const} */,
+    {%- default %}
+    /** @type {string} */
+    {{ type }}: '{{ esc(value) }}',
+    {%- endswitch %}
+    {%- endfor %}
+  }{% if !loop.last %},{% endif %}
+  {%- endfor %}
+}
+
+export default rules;
