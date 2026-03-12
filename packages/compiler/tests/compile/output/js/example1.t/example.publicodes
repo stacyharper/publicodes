@@ -1,0 +1,15 @@
+salaire:
+  unité: €/mois
+
+salaire annuel:
+  public: oui
+  unité: €/mois
+  valeur: salaire * 12
+  titre: "C'est un titre"
+  description: "C'est une description."
+  note: |
+    Attention, c'est une règle importante.
+
+a:
+  valeur: 5
+  public: oui
