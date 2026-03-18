@@ -53,6 +53,10 @@ let number_with_unit =
 let rule_name =
   [%sedlex.regexp? letter, Star any_char, Star (hspace, char, Star any_char)]
 
+let name =
+  [%sedlex.regexp?
+    ('+' | '-'), letter, Star any_char, Star (hspace, char, Star any_char)]
+
 let string = [%sedlex.regexp? '"', Star any, '"' | '\'', Star any, '\'']
 
 let date =
@@ -123,6 +127,11 @@ let rec lex_one (lexbuf : lexbuf) : Tokens.t Pos.t =
       update_acc lexbuf ; with_pos (BOOLEAN true)
   | "non" ->
       update_acc lexbuf ; with_pos (BOOLEAN false)
+  | name ->
+      update_acc lexbuf ;
+      let add = String.is_prefix (Utf8.lexeme lexbuf) ~prefix:"+" in
+      let str = String.drop_prefix (Utf8.lexeme lexbuf) 1 in
+      with_pos (NAME (add, str))
   | date -> (
       update_acc lexbuf ;
       lexbuf |> Utf8.lexeme |> String.split ~on:'/'

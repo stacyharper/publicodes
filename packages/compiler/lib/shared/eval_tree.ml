@@ -5,6 +5,7 @@ type constant =
   | Number of float * Units.t option
   | Bool of bool
   | String of string
+  | Name of bool * string
   | Date of Shared_ast.date
   | Undefined
   | Null

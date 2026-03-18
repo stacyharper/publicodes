@@ -19,6 +19,8 @@ let to_string t =
       "bool"
   | Literal Date ->
       "date"
+  | Literal Name ->
+      "name"
   | _ ->
       "?"
 
@@ -47,6 +49,8 @@ let unify t1 t2 =
           "un booléen (oui / non)"
       | Literal Date ->
           "une date"
+      | Literal Name ->
+          "une option"
       | _ ->
           failwith "Impossible"
     in

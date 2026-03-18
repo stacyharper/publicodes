@@ -1,0 +1,7 @@
+contract:
+  type: choix unique
+  par défaut: +CDI
+  options:
+    CDI:
+    CDD:
+    Stage:

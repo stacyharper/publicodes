@@ -28,6 +28,8 @@ let t_from_rule_type (tree : Tree.t) (rule_name : Rule_name.t) =
       Tstr "boolean"
   | Some (Literal Date) ->
       Tstr "date"
+  | Some (Literal Name) ->
+      Tstr "name"
   | None ->
       Tstr "unknown"
 
@@ -115,6 +117,8 @@ let rec t_from_rule_data ({value; _} : Tree.value) =
       t_type_value "number" @@ Tobj [("number", Tfloat n); ("unit", unit)]
   | Const (String s) ->
       t_type_value "text" @@ Tstr s
+  | Const (Name (add, s)) ->
+      t_type_value "string" @@ Tobj [("add", Tbool add); ("name", Tstr s)]
   | Const (Bool b) ->
       t_type_value "bool" @@ Tbool b
   | Const (Date d) ->

@@ -24,6 +24,9 @@ let type_check ?(snd_pass = false) (tree : Tree.t) =
       | String _ ->
           let+ _ = unify typ (literal ~pos String) in
           ()
+      | Name _ ->
+          let+ _ = unify typ (literal ~pos Name) in
+          ()
       | Date _ ->
           let+ _ = unify typ (literal ~pos Date) in
           ()

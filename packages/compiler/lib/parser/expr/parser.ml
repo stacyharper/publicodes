@@ -138,6 +138,9 @@ and parse_primary tokens ctx =
   | (STRING s, pos) :: rest ->
       let value = String s in
       (Pos.mk ~pos (Const value), rest)
+  | (NAME (add, s), pos) :: rest ->
+      let value = Name (add, s) in
+      (Pos.mk ~pos (Const value), rest)
   | (BOOLEAN b, pos) :: rest ->
       let value = Bool b in
       (Pos.mk ~pos (Const value), rest)

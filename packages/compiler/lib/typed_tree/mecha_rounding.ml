@@ -59,11 +59,6 @@ let typecheck ~unify_value ~pos ~typ ~snd_pass (_, precision, value) =
   if snd_pass then
     let typ, pos = UnionFind.get precision.meta in
     match typ with
-    | Any _ | Literal String | Literal Date ->
-        let code, message = Err.type_invalid_type in
-        fatal_error ~kind:`Type
-          ~hints:["arrondi doit être un nombre ou un booléen"]
-          ~pos ~code message
     | Literal Bool ->
         return ()
     | Number unit ->
@@ -78,4 +73,9 @@ let typecheck ~unify_value ~pos ~typ ~snd_pass (_, precision, value) =
           (* Otherwise, we check if the unit is compatible with the value *)
           let* _ = unify value.meta precision.meta in
           return ()
+    | _ ->
+        let code, message = Err.type_invalid_type in
+        fatal_error ~kind:`Type
+          ~hints:["arrondi doit être un nombre ou un booléen"]
+          ~pos ~code message
   else return ()

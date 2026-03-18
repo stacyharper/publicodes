@@ -19,6 +19,7 @@ type t =
   | DATE_LITERAL of [`Day of int * int * int | `Month of int * int]
   | NUMBER of float * string option
   | STRING of string
+  | NAME of bool * string
   | RULE_NAME of string
   | BOOLEAN of bool
 [@@deriving equal, compare, show, sexp]
@@ -64,6 +65,10 @@ let to_string = function
       Printf.sprintf "%g" n
   | STRING s ->
       Printf.sprintf "\"%s\"" s
+  | NAME (true, s) ->
+      Printf.sprintf "+%s" s
+  | NAME (false, s) ->
+      Printf.sprintf "-%s" s
   | RULE_NAME name ->
       Printf.sprintf "%s" name
   | BOOLEAN true ->
