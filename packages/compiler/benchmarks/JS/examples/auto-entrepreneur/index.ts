@@ -1,31 +1,12 @@
-import {
-	run,
-	bench,
-	summary,
-	do_not_optimize,
-	barplot,
-	boxplot,
-	lineplot,
-} from 'mitata'
+import { run, bench, summary, do_not_optimize } from 'mitata'
 
 import LegacyEngine from 'publicodes'
 
 // Test data imports
-import autoEntrepreneurLegacyRules from './examples/auto-entrepreneur/publicodes-build/index.js'
-import rules from './examples/auto-entrepreneur/model.publicodes.js'
+import autoEntrepreneurLegacyRules from './publicodes-build/index.js'
+import rules from './model.publicodes.js'
 
 console.log('🚀 Publicodes Engine Benchmark - auto-entrepreneur modèle \n')
-
-// // Auto-entrepreneur Model Benchmarks
-// summary(() => {
-// 	bench('[Auto-entrepreneur instantiation] Publicodes 1', () => {
-// 		return new LegacyEngine(autoEntrepreneurLegacyRules)
-// 	})
-
-// 	bench('[Auto-entrepreneur instantiation] Publicodes 2 (JS)', () => {
-
-// 	})
-// })
 
 const situationBuilder = ({ legacy }) => ({
 	"entreprise . chiffre d'affaires . BIC": 0,
