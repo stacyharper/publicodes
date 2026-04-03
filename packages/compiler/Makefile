@@ -63,4 +63,4 @@ $(EXAMPLES_DIR)/%/model.publicodes.js: $(EXAMPLES_DIR)/%/*.publicodes $(COMPILER
 #> bench-%                  | Run the benchmark for a given example (e.g. make bench-simple-TJM)
 bench-%: build $(EXAMPLES_DIR)/%/publicodes-build/index.js $(EXAMPLES_DIR)/%/model.publicodes.js
 	@echo "Running benchmark for $*..."
-	cd $(EXAMPLES_DIR)/$* && bun --expose-gc benchmark.ts
+	bun --expose-gc $(EXAMPLES_DIR)/$*/benchmark.ts
