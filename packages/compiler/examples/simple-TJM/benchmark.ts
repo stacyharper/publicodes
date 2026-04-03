@@ -6,8 +6,6 @@ import assert from 'assert'
 import localRules from './model.publicodes.js'
 import legacyRules from './publicodes-build/index.js'
 
-console.log('🚀 Publicodes Engine Benchmark - Simple TJM model\n')
-
 const legacyEngineSimple = new LegacyEngine(legacyRules)
 
 // Test situations

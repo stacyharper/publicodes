@@ -2,7 +2,7 @@ help : Makefile
 	@sed -n 's/^#> //p' $<
 
 JS_TESTS_DIR = tests/runtimes/JS
-JS_BENCHMARKS_DIR = benchmarks/JS
+EXAMPLES_DIR = examples
 CLI_DIR = ../cli
 COMPILER_PATH = _build/default/bin/main.exe
 
@@ -15,18 +15,22 @@ install:
 install-js:
 	@echo "Installing JavaScript dependencies..."
 	yarn --cwd $(JS_TESTS_DIR) install
-	yarn --cwd $(JS_BENCHMARKS_DIR) install
+	yarn --cwd $(EXAMPLES_DIR) install
 
 #> build                    | Build the compiler using dune
 build:
-	@echo "Building the project..."
+	@echo "Building the compiler..."
 	dune build
 
 #> dev                      | Run the dune build in watch mode for development (needed for LSP server)
 dev:
 	dune build --watch
 
-#> test-all						      | Run all tests (JavaScript and OCaml)
+#
+# Tests
+#
+
+#> test-all                 | Run all tests (JavaScript and OCaml)
 test-all: test-ocaml test-js
 
 #> test-js                  | Run JavaScript tests using yarn
@@ -44,14 +48,19 @@ test-ocaml-promote:
 	@echo "Running OCaml tests and promoting cram test outputs..."
 	dune promote
 
-#> bench-tjm                | Run the 'simple-TJM' example benchmark
-bench-tjm:
-	@echo "Running 'simple-TJM' benchmark..."
-	# yarn --cwd $(JS_BENCHMARKS_DIR) compile:simple-TJM
-	yarn --cwd $(JS_BENCHMARKS_DIR) benchmark:simple-TJM
+#
+# Benchmarks
+#
 
-#> bench-auto-entrepeneur  | Run the 'auto-entrepreneur' example benchmark
-bench-auto-entrepeneur:
-	@echo "Running 'auto-entrepreneur' benchmark..."
-	yarn --cwd $(JS_BENCHMARKS_DIR) compile:auto-entrepreneur
-	yarn --cwd $(JS_BENCHMARKS_DIR) benchmark:auto-entrepreneur
+$(EXAMPLES_DIR)/%/publicodes-build/index.js: $(EXAMPLES_DIR)/%/*.publicodes
+	@echo "Recompiling legacy publicodes-build for $*..."
+	yarn --cwd $(EXAMPLES_DIR)/$* run publicodes compile '*.publicodes'
+
+$(EXAMPLES_DIR)/%/model.publicodes.js: $(EXAMPLES_DIR)/%/*.publicodes $(COMPILER_PATH)
+	@echo "Recompiling new model.publicodes.js for $*..."
+	cd $(EXAMPLES_DIR)/$* && ../../$(COMPILER_PATH) compile *.publicodes
+
+#> bench-%                  | Run the benchmark for a given example (e.g. make bench-simple-TJM)
+bench-%: build $(EXAMPLES_DIR)/%/publicodes-build/index.js $(EXAMPLES_DIR)/%/model.publicodes.js
+	@echo "Running benchmark for $*..."
+	cd $(EXAMPLES_DIR)/$* && bun --expose-gc benchmark.ts
